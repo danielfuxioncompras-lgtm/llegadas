@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E2A32">
+<title>Llegadas al almacén</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Llegadas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asfalto:#1E2A32; --concreto:#EEF0EE; --papel:#FFFFFF; --tinta:#121A1F;
+    --gris:#5B6770; --linea:#D5DAD8; --amarillo:#F5B800; --verde:#1F7A4D; --rojo:#B42318;
+    --sans:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--sans);font-size:16px;line-height:1.45;background:var(--concreto);color:var(--tinta);padding-bottom:env(safe-area-inset-bottom,0px)}
+  header{background:var(--asfalto);color:#fff;padding:calc(20px + env(safe-area-inset-top,0px)) 20px 18px;border-bottom:6px solid var(--amarillo)}
+  header p{margin:0;color:#C9D1D6;font-size:14px}
+  header h1{margin:2px 0 0;font-family:var(--cond);font-weight:700;font-size:30px;line-height:1.05}
+  main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+  .oculto{display:none!important}
+  .bloque{background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:18px;margin-bottom:14px}
+  .bloque h2,.wa h2{font-family:var(--cond);font-size:21px;margin:0 0 4px}
+  .bloque > p,.wa > p{margin:0 0 6px;color:var(--gris);font-size:14px}
+  label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+  label span{font-weight:400;color:var(--gris)}
+  input,textarea{width:100%;font:inherit;font-size:17px;padding:12px;border:1.5px solid var(--linea);border-radius:6px;background:#fff;color:var(--tinta)}
+  input:focus,textarea:focus{outline:none;border-color:var(--asfalto);box-shadow:0 0 0 3px rgba(245,184,0,.45)}
+  textarea{min-height:84px;resize:vertical}
+  .tres{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tres label{margin-top:10px}
+  .placa-input{font-family:var(--cond);font-weight:700;font-size:24px;letter-spacing:.06em;text-transform:uppercase}
+  button{display:block;width:100%;font:inherit;font-weight:600;font-size:18px;padding:16px;border-radius:6px;border:0;cursor:pointer;margin-top:12px}
+  button:focus-visible,a:focus-visible{outline:3px solid var(--amarillo);outline-offset:2px}
+  .principal{background:var(--asfalto);color:#fff}
+  .principal:disabled{opacity:.6}
+  .secundario{background:#fff;color:var(--tinta);border:1.5px solid var(--linea)}
+  .peligro{background:transparent;color:var(--rojo);border:1.5px solid #E7B7B2}
+  .confirmar{background:var(--rojo);color:#fff}
+  .aviso{font-size:14px;color:var(--gris);margin-top:12px}
+  .error{background:#FDECEA;color:var(--rojo);border-radius:6px;padding:12px;margin-top:12px;font-weight:500}
+  .cargando{padding:60px 20px;text-align:center;color:var(--gris)}
+
+  .placa{display:inline-flex;flex-direction:column;border:2.5px solid var(--tinta);border-radius:5px;background:#fff;overflow:hidden;min-width:150px}
+  .placa small{background:#1D4E9E;color:#fff;font-family:var(--cond);font-size:11px;text-align:center;letter-spacing:.2em;padding:1px 0}
+  .placa b{font-family:var(--cond);font-size:34px;line-height:1.1;text-align:center;padding:2px 12px;letter-spacing:.05em}
+  .tablero{background:var(--asfalto);color:#fff;border-radius:6px;padding:22px 20px;margin:14px 0}
+  .estado{display:inline-block;font-weight:600;font-size:14px;padding:4px 10px;border-radius:3px;background:var(--amarillo);color:var(--tinta)}
+  .estado.llegando{background:#FFD65C} .estado.patio{background:#5FD39A} .estado.cerrado{background:#C9D1D6}
+  .eta{font-family:var(--cond);font-weight:700;font-size:88px;line-height:.95;margin:14px 0 4px}
+  .eta small{font-size:32px;margin-left:6px}
+  .detalle{color:#C9D1D6;font-size:16px}
+  .gps{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--gris);margin-top:4px}
+  .punto{width:10px;height:10px;border-radius:50%;background:#aaa;flex:none}
+  .punto.ok{background:var(--verde)} .punto.err{background:var(--rojo)}
+  .consejo{border-left:4px solid var(--amarillo);background:#FFF8E1;padding:12px 14px;font-size:15px;border-radius:0 6px 6px 0;margin-top:14px}
+
+  .wa{background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:16px;margin-top:14px}
+  .wa ol{margin:0;padding-left:22px;font-size:15px}
+  .wa li{margin:4px 0}
+  .btn-wa{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:14px;padding:16px;border-radius:6px;background:#1FA855;color:#fff;font-weight:600;font-size:18px;text-decoration:none}
+  .btn-wa svg{width:24px;height:24px;flex:none}
+  .wa-hecho{display:none;margin-top:10px;font-size:14px;color:var(--verde);font-weight:600}
+  .wa.abierto .wa-hecho{display:block}
+
+  .instalar{display:flex;gap:12px;align-items:center;background:var(--papel);border:1.5px dashed var(--linea);border-radius:6px;padding:12px 14px;margin-top:16px}
+  .instalar img{width:40px;height:40px;border-radius:8px;flex:none}
+  .instalar div{flex:1;font-size:14px;color:var(--gris)}
+  .instalar b{display:block;color:var(--tinta);font-size:15px}
+  .instalar button{width:auto;margin:0;padding:10px 14px;font-size:15px}
+
+  @media (prefers-reduced-motion:no-preference){ .punto.ok{animation:latido 2s infinite} }
+  @keyframes latido{50%{opacity:.35}}
+</style>
+</head>
+<body>
+<header>
+  <p>Registro de llegada</p>
+  <h1 id="h-almacen">Cargando…</h1>
+</header>
+
+<main>
+  <div id="vista-cargando" class="cargando">Conectando con el almacén…</div>
+
+  <section id="vista-sin-api" class="oculto">
+    <div class="error">No se pudo conectar con el almacén. <span id="sin-api-detalle"></span></div>
+    <button class="principal" type="button" onclick="location.reload()">Reintentar</button>
+  </section>
+
+  <!-- Formulario -->
+  <section id="vista-form" class="oculto">
+    <div class="bloque">
+      <h2>Tus datos</h2>
+      <p>Se guardan en este celular para la próxima vez.</p>
+      <label for="proveedor">Empresa proveedora</label>
+      <input id="proveedor" autocomplete="organization" required>
+      <label for="ruc">RUC <span>(opcional)</span></label>
+      <input id="ruc" inputmode="numeric" maxlength="11">
+      <label for="conductor">Nombre del conductor</label>
+      <input id="conductor" autocomplete="name" required>
+      <label for="telefono">Celular <span>(opcional)</span></label>
+      <input id="telefono" type="tel" autocomplete="tel" placeholder="987 654 321">
+      <label for="placa">Placa del vehículo</label>
+      <input id="placa" class="placa-input" placeholder="ABC-123" maxlength="10" required>
+    </div>
+
+    <div class="bloque">
+      <h2>Lo que traes</h2>
+      <label for="carga">Descripción de la carga <span>(opcional)</span></label>
+      <textarea id="carga" placeholder="Ej. 40 cajas de detergente 5 kg, 10 bolsas de arroz 50 kg"></textarea>
+      <label for="guia">N° de guía de remisión u orden de compra <span>(opcional)</span></label>
+      <input id="guia" placeholder="EG01-000123">
+      <div class="tres">
+        <div><label for="pallets">Pallets</label><input id="pallets" type="number" inputmode="numeric" min="0" step="1" placeholder="—"></div>
+        <div><label for="peso">Peso kg</label><input id="peso" type="number" inputmode="decimal" min="0" step="any" placeholder="—"></div>
+        <div><label for="volumen">Vol. m³</label><input id="volumen" type="number" inputmode="decimal" min="0" step="any" placeholder="—"></div>
+      </div>
+    </div>
+
+    <button id="btn-iniciar" class="principal" type="button" onclick="iniciar()">Iniciar viaje y compartir ubicación</button>
+    <div id="error-form" class="error oculto" role="alert"></div>
+    <p class="aviso">Tu ubicación se comparte solo mientras esta página esté abierta y hasta que llegues al patio. El celular te pedirá permiso.</p>
+
+    <div id="instalar" class="instalar oculto">
+      <img src="icons/icon-192.png" alt="">
+      <div><b>Agrégala a tu pantalla de inicio</b><span id="instalar-texto">La próxima vez la abres con un toque, sin escanear.</span></div>
+      <button id="btn-instalar" class="secundario oculto" type="button" onclick="instalar()">Agregar</button>
+    </div>
+  </section>
+
+  <!-- Seguimiento -->
+  <section id="vista-viaje" class="oculto" aria-live="polite">
+    <div class="placa"><small>PERÚ</small><b id="v-placa">—</b></div>
+    <div class="tablero">
+      <span id="v-estado" class="estado">En ruta</span>
+      <div id="v-eta" class="eta">—</div>
+      <div id="v-detalle" class="detalle">Calculando tu llegada…</div>
+    </div>
+    <div class="gps"><span id="gps-punto" class="punto"></span><span id="gps-texto">Buscando señal GPS…</span></div>
+    <div class="gps"><span class="punto" style="visibility:hidden"></span><span id="envio">—</span></div>
+
+    <div id="consejo" class="consejo">
+      Deja esta pantalla abierta durante el viaje. Si bloqueas el celular o cambias de app, el almacén deja de ver tu ubicación aquí hasta que vuelvas.
+    </div>
+
+    <div id="wa" class="wa oculto">
+      <h2>Comparte también por WhatsApp</h2>
+      <p>Así el almacén te sigue viendo aunque cierres esta página o bloquees el celular.</p>
+      <ol>
+        <li>Toca el botón verde. Se abre el chat del almacén con un mensaje listo; envíalo.</li>
+        <li>En ese chat toca el clip 📎 (en iPhone, el <b>+</b>) y elige <b>Ubicación</b>.</li>
+        <li>Toca <b>Compartir ubicación en tiempo real</b>, elige <b>8 horas</b> y envía.</li>
+      </ol>
+      <a id="btn-wa" class="btn-wa" href="#" target="_blank" rel="noopener" onclick="waAbierto()">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+        Abrir WhatsApp del almacén
+      </a>
+      <div class="wa-hecho">Listo. Vuelve a esta página cuando termines: aquí sigue tu hora estimada de llegada.</div>
+    </div>
+
+    <div id="acciones-viaje">
+      <button class="secundario" type="button" onclick="llegue(this)">Ya llegué al patio</button>
+      <button class="peligro" type="button" onclick="cancelar(this)">Cancelar este viaje</button>
+    </div>
+    <div id="acciones-fin" class="oculto">
+      <button class="principal" type="button" onclick="nuevoViaje()">Registrar otro viaje</button>
+    </div>
+    <p id="v-id" class="aviso"></p>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  const K_VIAJE = 'llegadas_viaje', K_PERFIL = 'llegadas_perfil';
+  const EN_CAMINO = ['En ruta', 'Llegando'];
+  let CFG = { almacen: 'el almacén', intervaloSeg: 30, whatsapp: '' };
+  let viaje = null;            // { id, token }
+  let watchId = null, timer = null, ultimaPos = null, enviando = false, ultimoEnvio = 0, wakeLock = null, promptInstalar = null;
+
+  const $ = id => document.getElementById(id);
+  const ls = {
+    get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: k => { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  const hora = d => d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  const val = id => $(id).value.trim();
+
+  function mostrar(vista) {
+    ['cargando', 'sin-api', 'form', 'viaje'].forEach(v => $('vista-' + v).classList.toggle('oculto', v !== vista));
+    window.scrollTo(0, 0);
+  }
+
+  /* ── Arranque ── */
+  window.addEventListener('load', async () => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    cargarPerfil();
+    try {
+      CFG = await api('config');
+      $('h-almacen').textContent = CFG.almacen;
+      document.title = 'Llegada a ' + CFG.almacen;
+    } catch (e) {
+      $('h-almacen').textContent = 'Llegadas';
+      $('sin-api-detalle').textContent = e.message + '.';
+      return mostrar('sin-api');
+    }
+
+    try { viaje = JSON.parse(ls.get(K_VIAJE) || 'null'); } catch (e) { viaje = null; }
+    if (viaje && viaje.id && viaje.token) {
+      try {
+        const v = await api('viaje', { id: viaje.id, token: viaje.token });
+        if (!['Finalizado', 'Cancelado'].includes(v.Estado)) {
+          pintar(v); mostrar('viaje');
+          if (EN_CAMINO.includes(v.Estado)) iniciarGPS();
+          return;
+        }
+      } catch (e) {
+        if (/conexión|tardó/i.test(e.message)) { mostrar('viaje'); iniciarGPS(); return; } // sin señal: sigue intentando
+      }
+      ls.del(K_VIAJE); viaje = null;
+    }
+    mostrar('form');
+    prepararInstalacion();
+  });
+
+  function cargarPerfil() {
+    try {
+      const p = JSON.parse(ls.get(K_PERFIL) || '{}');
+      ['proveedor', 'ruc', 'conductor', 'telefono', 'placa'].forEach(k => { if (p[k]) $(k).value = p[k]; });
+    } catch (e) {}
+  }
+
+  /* ── Iniciar viaje ── */
+  async function iniciar() {
+    const d = {
+      proveedor: val('proveedor'), ruc: val('ruc'), conductor: val('conductor'), telefono: val('telefono'),
+      placa: val('placa'), carga: val('carga'), guia: val('guia'),
+      pallets: val('pallets'), peso: val('peso'), volumen: val('volumen')
+    };
+    const faltan = [['proveedor', 'empresa'], ['conductor', 'conductor'], ['placa', 'placa']].filter(([k]) => !d[k]);
+    if (faltan.length) return errorForm('Completa: ' + faltan.map(f => f[1]).join(', ') + '.', faltan[0][0]);
+    if (!('geolocation' in navigator)) return errorForm('Este navegador no puede compartir ubicación. Abre el enlace en Chrome o Safari.');
+
+    const btn = $('btn-iniciar');
+    const restaurar = () => { btn.disabled = false; btn.textContent = 'Iniciar viaje y compartir ubicación'; };
+    btn.disabled = true; btn.textContent = 'Pidiendo permiso de ubicación…';
+    $('error-form').classList.add('oculto');
+    try {
+      ultimaPos = await new Promise((ok, ko) => navigator.geolocation.getCurrentPosition(ok, ko,
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }));
+    } catch (e) { restaurar(); return errorForm(mensajeGeo(e)); }
+
+    btn.textContent = 'Registrando viaje…';
+    try {
+      const v = await api('iniciarViaje', { datos: d });
+      viaje = { id: v.ID, token: v.token };
+      ls.set(K_VIAJE, JSON.stringify(viaje));
+      ls.set(K_PERFIL, JSON.stringify({ proveedor: d.proveedor, ruc: d.ruc, conductor: d.conductor, telefono: d.telefono, placa: d.placa }));
+      pintar(v); mostrar('viaje'); iniciarGPS();
+    } catch (e) {
+      errorForm('No se pudo registrar el viaje: ' + e.message + '. Inténtalo otra vez.');
+    } finally { restaurar(); }
+  }
+
+  function errorForm(msg, campo) {
+    const el = $('error-form'); el.textContent = msg; el.classList.remove('oculto');
+    if (campo) $(campo).focus();
+  }
+
+  function mensajeGeo(e) {
+    if (e && e.code === 1) return 'La ubicación está bloqueada para esta página. Actívala en los ajustes del navegador (ícono del candado junto a la dirección) y vuelve a intentarlo.';
+    if (e && e.code === 3) return 'El GPS tardó demasiado. Sal a un lugar abierto y vuelve a intentarlo.';
+    return 'No se pudo obtener tu ubicación. Revisa que el GPS esté encendido.';
+  }
+
+  /* ── GPS y envío ── */
+  function iniciarGPS() {
+    pedirWakeLock();
+    if (watchId === null) {
+      watchId = navigator.geolocation.watchPosition(p => {
+        ultimaPos = p;
+        gps('ok', 'GPS activo · precisión ' + Math.round(p.coords.accuracy) + ' m');
+        if (Date.now() - ultimoEnvio > CFG.intervaloSeg * 1000) enviar();
+      }, e => gps('err', mensajeGeo(e)), { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
+    }
+    clearInterval(timer);
+    timer = setInterval(enviar, CFG.intervaloSeg * 1000);
+    enviar();
+  }
+
+  function detenerGPS() {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null; clearInterval(timer);
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    gps('', 'Ya no se comparte tu ubicación');
+  }
+
+  const posPayload = () => {
+    const c = ultimaPos.coords;
+    return { lat: c.latitude, lng: c.longitude, precision: c.accuracy, velocidad: c.speed };
+  };
+
+  async function enviar() {
+    if (!viaje || !ultimaPos || enviando) return;
+    enviando = true;
+    try {
+      const v = await api('ubicacion', { id: viaje.id, token: viaje.token, pos: posPayload() });
+      ultimoEnvio = Date.now();
+      $('envio').textContent = 'Última actualización enviada ' + hora(new Date());
+      pintar(v);
+      if (!EN_CAMINO.includes(v.Estado)) detenerGPS();
+    } catch (e) {
+      $('envio').textContent = e.message + '. Se reintenta en ' + CFG.intervaloSeg + ' s.';
+    } finally { enviando = false; }
+  }
+
+  function gps(tipo, texto) { $('gps-punto').className = 'punto ' + tipo; $('gps-texto').textContent = texto; }
+
+  /* ── Pantalla del viaje ── */
+  function pintar(v) {
+    $('v-placa').textContent = v.Placa || '—';
+    $('v-id').textContent = 'Código de viaje ' + v.ID;
+    const est = $('v-estado');
+    est.textContent = v.Estado;
+    est.className = 'estado ' + ({ 'Llegando': 'llegando', 'En patio': 'patio', 'Descargando': 'patio', 'Finalizado': 'cerrado', 'Cancelado': 'cerrado' }[v.Estado] || '');
+
+    const enCamino = EN_CAMINO.includes(v.Estado);
+    $('acciones-viaje').classList.toggle('oculto', !enCamino);
+    $('acciones-fin').classList.toggle('oculto', enCamino);
+    $('consejo').classList.toggle('oculto', !enCamino);
+    pintarWhatsApp(v, enCamino);
+
+    if (enCamino && v.ETA_min !== '' && v.ETA_min != null) {
+      const m = Number(v.ETA_min);
+      $('v-eta').innerHTML = m >= 60 ? Math.floor(m / 60) + '<small>h</small> ' + (m % 60) + '<small>min</small>' : m + '<small>min</small>';
+      const km = Number(v.Distancia_km);
+      const dist = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km';
+      $('v-detalle').textContent = 'Llegas aprox. a las ' + hora(new Date(v.Llegada_estimada)) + ' · faltan ' + dist;
+    } else if (enCamino) {
+      $('v-eta').textContent = '—';
+      $('v-detalle').textContent = 'Calculando tu llegada…';
+    } else if (v.Estado === 'Cancelado') {
+      $('v-eta').textContent = 'Cancelado';
+      $('v-detalle').textContent = 'Este viaje ya no se sigue.';
+    } else {
+      $('v-eta').textContent = 'En patio';
+      $('v-detalle').textContent = 'Llegada registrada' + (v.Llegada_real ? ' a las ' + hora(new Date(v.Llegada_real)) : '') + '. Acércate a recepción con tu guía.';
+    }
+  }
+
+  function pintarWhatsApp(v, enCamino) {
+    const caja = $('wa');
+    if (!CFG.whatsapp || !enCamino) { caja.classList.add('oculto'); return; }
+    const msg = [
+      'Hola ' + CFG.almacen + ', voy en camino.',
+      'Proveedor: ' + (v.Proveedor || ''),
+      'Placa: ' + (v.Placa || ''),
+      'Conductor: ' + (v.Conductor || ''),
+      v.Pallets !== '' && v.Pallets != null ? 'Pallets: ' + v.Pallets : '',
+      'Código de viaje: ' + v.ID,
+      'Ahora te comparto mi ubicación en tiempo real.'
+    ].filter(Boolean).join('\n');
+    $('btn-wa').href = 'https://wa.me/' + CFG.whatsapp + '?text=' + encodeURIComponent(msg);
+    caja.classList.remove('oculto');
+    if (ls.get('llegadas_wa_' + v.ID)) caja.classList.add('abierto');
+  }
+
+  function waAbierto() {
+    $('wa').classList.add('abierto');
+    if (viaje) ls.set('llegadas_wa_' + viaje.id, '1');
+  }
+
+  function confirmarToque(btn, textoConfirmar) {
+    if (btn.dataset.armado) return true;
+    const original = btn.textContent;
+    btn.dataset.armado = '1'; btn.textContent = textoConfirmar; btn.classList.add('confirmar');
+    setTimeout(() => { delete btn.dataset.armado; btn.textContent = original; btn.classList.remove('confirmar'); }, 4000);
+    return false;
+  }
+
+  async function llegue(btn) {
+    if (!confirmarToque(btn, 'Toca otra vez para confirmar tu llegada')) return;
+    try { const v = await api('llegada', { id: viaje.id, token: viaje.token }); detenerGPS(); pintar(v); }
+    catch (e) { $('envio').textContent = 'No se pudo registrar la llegada: ' + e.message; }
+  }
+
+  async function cancelar(btn) {
+    if (!confirmarToque(btn, 'Toca otra vez para cancelar el viaje')) return;
+    try { await api('cancelar', { id: viaje.id, token: viaje.token }); } catch (e) {}
+    detenerGPS(); nuevoViaje();
+  }
+
+  function nuevoViaje() {
+    ls.del(K_VIAJE); viaje = null; ultimaPos = null;
+    ['carga', 'guia', 'pallets', 'peso', 'volumen'].forEach(k => $(k).value = '');
+    mostrar('form');
+    prepararInstalacion();
+  }
+
+  /* ── Pantalla encendida y cierre de página ── */
+  async function pedirWakeLock() {
+    try { if ('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!viaje || watchId === null) return;
+    if (document.visibilityState === 'hidden') {
+      if (ultimaPos) apiBeacon('ubicacion', { id: viaje.id, token: viaje.token, pos: posPayload() }); // último punto antes de irse
+    } else {
+      wakeLock = null; pedirWakeLock(); enviar();
+    }
+  });
+
+  /* ── Agregar a pantalla de inicio ── */
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); promptInstalar = e;
+    $('btn-instalar').classList.remove('oculto');
+    prepararInstalacion();
+  });
+
+  function prepararInstalacion() {
+    const instalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (instalada) return $('instalar').classList.add('oculto');
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (promptInstalar) {
+      $('instalar').classList.remove('oculto');
+    } else if (ios) {
+      $('instalar-texto').textContent = 'En Safari toca Compartir y luego "Agregar a inicio".';
+      $('instalar').classList.remove('oculto');
+    }
+  }
+
+  async function instalar() {
+    if (!promptInstalar) return;
+    promptInstalar.prompt();
+    await promptInstalar.userChoice.catch(() => {});
+    promptInstalar = null;
+    $('instalar').classList.add('oculto');
+  }
+</script>
+</body>
+</html>

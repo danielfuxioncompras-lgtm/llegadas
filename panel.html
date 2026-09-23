@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Patio de recepción</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --asfalto:#1E2A32; --concreto:#EEF0EE; --papel:#FFFFFF; --tinta:#121A1F;
+    --gris:#5B6770; --linea:#D5DAD8; --amarillo:#F5B800; --verde:#1F7A4D; --rojo:#B42318;
+    --c-ruta:#2F6FDE; --c-llegando:#E08A00; --c-patio:#1F7A4D; --c-descarga:#7B4BC9; --c-cerrado:#8A959C;
+    --sans:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--sans);font-size:15px;line-height:1.4;background:var(--concreto);color:var(--tinta);display:flex;flex-direction:column}
+  .oculto{display:none!important}
+  button,select,input{font:inherit}
+  button{cursor:pointer}
+  button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--amarillo);outline-offset:2px}
+
+  #vista-panel{display:flex;flex-direction:column;flex:1;min-height:0}
+  header{background:var(--asfalto);color:#fff;border-bottom:6px solid var(--amarillo);padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{margin:0;font-family:var(--cond);font-size:26px;font-weight:700;flex:1;min-width:220px}
+  header h1 span{font-weight:600;color:#C9D1D6}
+  #reloj{color:#C9D1D6;font-size:14px}
+  .btn-top{background:transparent;color:#fff;border:1.5px solid #4A5A64;border-radius:5px;padding:7px 14px}
+  .btn-top.amarillo{background:var(--amarillo);border-color:var(--amarillo);color:var(--tinta);font-weight:600}
+
+  .tablero{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--asfalto);color:#fff}
+  .tablero div{padding:10px 20px 14px;border-right:1px solid #33434D}
+  .tablero div:last-child{border-right:0}
+  .tablero b{display:block;font-family:var(--cond);font-size:40px;line-height:1}
+  .tablero span{font-size:13px;color:#C9D1D6}
+
+  .cuerpo{flex:1;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,1fr);min-height:0}
+  #mapa{height:100%;min-height:360px;background:#dfe3e1}
+  aside{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--linea);background:var(--papel)}
+  .pestanas{display:flex;border-bottom:1px solid var(--linea)}
+  .pestanas button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:12px 8px;font-weight:600;color:var(--gris)}
+  .pestanas button[aria-selected="true"]{color:var(--tinta);border-bottom-color:var(--amarillo)}
+  #lista{overflow-y:auto;flex:1;padding:4px 0}
+  .vacio{padding:40px 24px;color:var(--gris);text-align:center}
+
+  .viaje{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;padding:14px 18px;border-bottom:1px solid var(--linea);border-left:5px solid var(--c);cursor:pointer}
+  .viaje:hover{background:#F7F8F7}
+  .placa{grid-row:span 2;align-self:start;display:inline-flex;flex-direction:column;border:2px solid var(--tinta);border-radius:4px;background:#fff;overflow:hidden;min-width:92px}
+  .placa small{background:#1D4E9E;color:#fff;font-family:var(--cond);font-size:9px;text-align:center;letter-spacing:.2em}
+  .placa b{font-family:var(--cond);font-size:21px;line-height:1.15;text-align:center;padding:0 8px;letter-spacing:.04em}
+  .prov{font-weight:600;font-size:16px}
+  .sub{color:var(--gris);font-size:13px}
+  .sub a{color:inherit}
+  .eta{text-align:right;grid-row:span 2}
+  .eta b{display:block;font-family:var(--cond);font-size:30px;line-height:1;color:var(--c)}
+  .eta span{font-size:13px;color:var(--gris)}
+  .extra{grid-column:2 / 4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+  .dato{background:var(--concreto);border-radius:3px;padding:2px 8px;font-size:13px}
+  .carga{grid-column:2 / 4;font-size:13px;margin-top:2px;white-space:pre-wrap}
+  .senal{font-size:13px;color:var(--gris)} .senal.mala{color:var(--rojo);font-weight:600}
+  .extra select{margin-left:auto;padding:5px 8px;border:1.5px solid var(--linea);border-radius:4px;background:#fff}
+
+  .login{margin:auto;background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:28px;width:min(360px,92vw)}
+  .login h2{font-family:var(--cond);margin:0 0 14px;font-size:26px}
+  .login label{display:block;font-weight:600;margin-bottom:6px}
+  .login input{width:100%;padding:12px;border:1.5px solid var(--linea);border-radius:5px;font-size:17px}
+  .login button{width:100%;margin-top:12px;padding:13px;border:0;border-radius:5px;background:var(--asfalto);color:#fff;font-weight:600;font-size:16px}
+  .err{color:var(--rojo);margin-top:10px;font-weight:500}
+
+  .modal{position:fixed;inset:0;background:rgba(18,26,31,.6);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px}
+  .hoja-qr{background:#fff;border-radius:6px;padding:28px;text-align:center;max-width:420px;width:100%}
+  .hoja-qr h2{font-family:var(--cond);font-size:30px;margin:0 0 4px}
+  .hoja-qr p{margin:0 0 18px;color:var(--gris)}
+  #qr{display:inline-block;padding:14px;border:6px solid var(--amarillo);border-radius:6px}
+  #qr img,#qr canvas{display:block}
+  .hoja-qr code{display:block;word-break:break-all;font-size:12px;color:var(--gris);margin-top:14px}
+  .hoja-qr .acciones{display:flex;gap:10px;margin-top:18px}
+  .hoja-qr .acciones button{flex:1;padding:11px;border-radius:5px;border:1.5px solid var(--linea);background:#fff;font-weight:600}
+  .hoja-qr .acciones button:first-child{background:var(--asfalto);color:#fff;border-color:var(--asfalto)}
+
+  .pin{width:16px;height:16px;border-radius:50%;background:var(--c);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--tinta)}
+  .pin.sin-senal{opacity:.45}
+  .pin-almacen{width:22px;height:22px;background:var(--amarillo);border:3px solid var(--tinta);transform:rotate(45deg)}
+
+  @media (max-width:900px){
+    .cuerpo{grid-template-columns:1fr;grid-template-rows:320px auto}
+    aside{border-left:0}
+    .tablero{grid-template-columns:repeat(3,1fr)}
+    .tablero div:nth-child(n+4){display:none}
+  }
+  @media print{
+    body>*:not(#modal-qr){display:none!important}
+    .modal{position:static;background:none}
+    .hoja-qr .acciones{display:none}
+  }
+</style>
+</head>
+<body>
+
+<section id="vista-login" class="login oculto">
+  <h2>Patio de recepción</h2>
+  <label for="clave">Clave del panel</label>
+  <input id="clave" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()">
+  <button id="btn-entrar" type="button" onclick="entrar()">Entrar</button>
+  <div id="login-err" class="err" role="alert"></div>
+</section>
+
+<div id="vista-panel" class="oculto">
+  <header>
+    <h1><span id="h-almacen">Almacén</span> · patio de recepción</h1>
+    <span id="reloj">Actualizando…</span>
+    <button class="btn-top" type="button" onclick="cargar()">Actualizar</button>
+    <button class="btn-top amarillo" type="button" onclick="abrirQR()">QR para proveedores</button>
+    <button class="btn-top" type="button" onclick="salir()">Salir</button>
+  </header>
+
+  <div class="tablero" aria-label="Resumen">
+    <div><b id="k-camino">0</b><span>en camino</span></div>
+    <div><b id="k-pronto">0</b><span>llegan en ≤ 30 min</span></div>
+    <div><b id="k-patio">0</b><span>en patio o descargando</span></div>
+    <div><b id="k-pallets">0</b><span>pallets por llegar</span></div>
+    <div><b id="k-peso">0</b><span>toneladas por llegar</span></div>
+  </div>
+
+  <div class="cuerpo">
+    <div id="mapa" aria-label="Mapa de proveedores"></div>
+    <aside>
+      <div class="pestanas" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="camino" onclick="tab('camino')">Por llegar <span id="t-camino"></span></button>
+        <button role="tab" aria-selected="false" data-tab="patio" onclick="tab('patio')">En patio <span id="t-patio"></span></button>
+        <button role="tab" aria-selected="false" data-tab="cerrado" onclick="tab('cerrado')">Cerrados hoy <span id="t-cerrado"></span></button>
+      </div>
+      <div id="lista"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="modal-qr" class="modal oculto" onclick="if(event.target===this)cerrarQR()">
+  <div class="hoja-qr">
+    <h2 id="qr-titulo">¿Vienes al almacén?</h2>
+    <p>Escanea con la cámara, registra tu carga y comparte tu ubicación para que te esperemos en el patio.</p>
+    <div id="qr"></div>
+    <code id="qr-url"></code>
+    <div class="acciones">
+      <button type="button" onclick="window.print()">Imprimir</button>
+      <button type="button" onclick="cerrarQR()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  const URL_PROVEEDOR = new URL('./', location.href).href; // la página que abre el QR
+  const REFRESCO_MS = 20000;
+  const COLOR = { 'En ruta': 'var(--c-ruta)', 'Llegando': 'var(--c-llegando)', 'En patio': 'var(--c-patio)', 'Descargando': 'var(--c-descarga)', 'Finalizado': 'var(--c-cerrado)', 'Cancelado': 'var(--c-cerrado)' };
+  const GRUPO = { 'En ruta': 'camino', 'Llegando': 'camino', 'En patio': 'patio', 'Descargando': 'patio', 'Finalizado': 'cerrado', 'Cancelado': 'cerrado' };
+
+  let clave = null, datos = null, pestana = 'camino', mapa = null, marcadores = {}, ajustado = false, desfase = 0, timer = null, qrHecho = false, cargando = false;
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const hora = iso => iso ? new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const ahora = () => Date.now() + desfase;
+  const minDesde = iso => iso ? Math.max(0, Math.round((ahora() - Date.parse(iso)) / 60000)) : null;
+  const fmtMin = m => m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min';
+
+  window.addEventListener('load', () => {
+    if (!apiConfigurada()) return mostrarLogin('Falta pegar la URL de la API en config.js.');
+    try { clave = sessionStorage.getItem('llegadas_clave'); } catch (e) {}
+    clave ? cargar(true) : mostrarLogin();
+  });
+
+  function mostrarLogin(msg) {
+    $('vista-panel').classList.add('oculto');
+    $('vista-login').classList.remove('oculto');
+    $('login-err').textContent = msg || '';
+    $('clave').focus();
+  }
+
+  function entrar() {
+    clave = $('clave').value;
+    $('btn-entrar').textContent = 'Entrando…';
+    cargar(true).finally(() => { $('btn-entrar').textContent = 'Entrar'; });
+  }
+
+  function salir() {
+    try { sessionStorage.removeItem('llegadas_clave'); } catch (e) {}
+    location.reload();
+  }
+
+  async function cargar(primeraVez) {
+    if (cargando) return;
+    cargando = true;
+    try {
+      datos = await api('panel', { clave });
+      try { sessionStorage.setItem('llegadas_clave', clave); } catch (e) {}
+      desfase = Date.parse(datos.servidor) - Date.now();
+      if (primeraVez === true) {
+        $('vista-login').classList.add('oculto');
+        $('vista-panel').classList.remove('oculto');
+        $('h-almacen').textContent = datos.almacen.nombre;
+        $('qr-titulo').textContent = '¿Vienes a ' + datos.almacen.nombre + '?';
+        document.title = 'Patio · ' + datos.almacen.nombre;
+        iniciarMapa();
+        clearInterval(timer); timer = setInterval(cargar, REFRESCO_MS);
+      }
+      pintar();
+      $('reloj').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+      if (/clave/i.test(e.message)) {
+        clearInterval(timer);
+        try { sessionStorage.removeItem('llegadas_clave'); } catch (x) {}
+        mostrarLogin('Clave incorrecta. Revísala en la hoja Config (PANEL_CLAVE).');
+      } else if (primeraVez === true) {
+        mostrarLogin(e.message + '.');
+      } else {
+        $('reloj').textContent = e.message + '. Reintentando…';
+      }
+    } finally { cargando = false; }
+  }
+
+  function iniciarMapa() {
+    if (mapa) return;
+    const a = datos.almacen;
+    mapa = L.map('mapa').setView([a.lat, a.lng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+    L.circle([a.lat, a.lng], { radius: a.radio, color: '#F5B800', weight: 2, fillOpacity: .12 }).addTo(mapa);
+    L.marker([a.lat, a.lng], { icon: L.divIcon({ className: '', html: '<div class="pin-almacen"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) })
+      .bindTooltip(esc(a.nombre)).addTo(mapa);
+  }
+
+  const etaAjustada = x => x.ETA_min === '' || x.ETA_min == null ? null : Math.max(0, Number(x.ETA_min) - (minDesde(x.Ultima_actualizacion) || 0));
+
+  function pintar() {
+    const v = datos.viajes;
+    const camino = v.filter(x => GRUPO[x.Estado] === 'camino');
+    const patio = v.filter(x => GRUPO[x.Estado] === 'patio');
+    const cerrado = v.filter(x => GRUPO[x.Estado] === 'cerrado');
+
+    $('k-camino').textContent = camino.length;
+    $('k-pronto').textContent = camino.filter(x => { const e = etaAjustada(x); return e !== null && e <= 30; }).length;
+    $('k-patio').textContent = patio.length;
+    $('k-pallets').textContent = camino.reduce((s, x) => s + (Number(x.Pallets) || 0), 0);
+    $('k-peso').textContent = (camino.reduce((s, x) => s + (Number(x.Peso_kg) || 0), 0) / 1000).toFixed(1).replace('.0', '');
+    $('t-camino').textContent = camino.length ? '(' + camino.length + ')' : '';
+    $('t-patio').textContent = patio.length ? '(' + patio.length + ')' : '';
+    $('t-cerrado').textContent = cerrado.length ? '(' + cerrado.length + ')' : '';
+
+    camino.sort((a, b) => (Date.parse(a.Llegada_estimada) || Infinity) - (Date.parse(b.Llegada_estimada) || Infinity));
+    patio.sort((a, b) => Date.parse(a.Llegada_real || a.Registrado) - Date.parse(b.Llegada_real || b.Registrado));
+    cerrado.sort((a, b) => Date.parse(b.Registrado) - Date.parse(a.Registrado));
+    const lista = { camino, patio, cerrado }[pestana];
+    const vacio = {
+      camino: 'Nadie en camino por ahora. Cuando un proveedor escanee el QR aparecerá aquí.',
+      patio: 'El patio está libre.',
+      cerrado: 'Aún no se ha cerrado ningún viaje hoy.'
+    }[pestana];
+    $('lista').innerHTML = lista.length ? lista.map(tarjeta).join('') : '<div class="vacio">' + vacio + '</div>';
+    pintarMapa(camino.concat(patio));
+  }
+
+  function tarjeta(x) {
+    const g = GRUPO[x.Estado];
+    const sin = minDesde(x.Ultima_actualizacion);
+    let etaHtml = '', senal = '';
+    if (g === 'camino') {
+      const eta = etaAjustada(x);
+      etaHtml = eta === null ? '<b>—</b><span>sin ubicación aún</span>' : '<b>' + fmtMin(eta) + '</b><span>aprox. ' + hora(x.Llegada_estimada) + '</span>';
+      const km = Number(x.Distancia_km);
+      const dist = x.Distancia_km === '' ? '' : (km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km') + ' · ';
+      senal = sin === null
+        ? '<span class="senal mala">Esperando primera ubicación</span>'
+        : '<span class="senal ' + (sin > datos.minutosSinSenal ? 'mala' : '') + '">' + dist +
+          (sin > datos.minutosSinSenal ? 'Sin señal hace ' + fmtMin(sin) + ' · revisa WhatsApp' : 'actualizado hace ' + (sin < 1 ? 'segundos' : fmtMin(sin))) + '</span>';
+    } else if (g === 'patio') {
+      const m = minDesde(x.Llegada_real);
+      etaHtml = '<b>' + (m === null ? '—' : fmtMin(m)) + '</b><span>en patio desde ' + hora(x.Llegada_real) + '</span>';
+    } else {
+      etaHtml = '<b style="font-size:20px">' + esc(x.Estado) + '</b><span>' + (x.Llegada_real ? 'llegó ' + hora(x.Llegada_real) : '') + '</span>';
+    }
+
+    const datosCarga = [
+      x.Pallets !== '' ? x.Pallets + ' pallets' : '',
+      x.Peso_kg !== '' ? Number(x.Peso_kg).toLocaleString('es-PE') + ' kg' : '',
+      x.Volumen_m3 !== '' ? x.Volumen_m3 + ' m³' : '',
+      x.Guia_OC ? 'Guía ' + x.Guia_OC : ''
+    ].filter(Boolean).map(d => '<span class="dato">' + esc(d) + '</span>').join('');
+
+    let digitos = String(x.Telefono || '').replace(/\D/g, '');
+    if (digitos.length === 9 && digitos[0] === '9') digitos = '51' + digitos;
+    const tel = x.Telefono
+      ? ' · <a href="tel:' + esc(String(x.Telefono).replace(/\s/g, '')) + '" onclick="event.stopPropagation()">' + esc(x.Telefono) + '</a>' +
+        (digitos.length >= 10 ? ' · <a href="https://wa.me/' + digitos + '?text=' + encodeURIComponent('Hola ' + (x.Conductor || '') + ', te escribimos del almacén por el viaje de la placa ' + (x.Placa || '') + '.') + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>' : '')
+      : '';
+    const opciones = datos.estados.map(e => '<option' + (e === x.Estado ? ' selected' : '') + '>' + e + '</option>').join('');
+    const id = esc(x.ID);
+
+    return '<div class="viaje" style="--c:' + COLOR[x.Estado] + '" onclick="enfocar(\'' + id + '\')">' +
+      '<div class="placa"><small>PERÚ</small><b>' + esc(x.Placa) + '</b></div>' +
+      '<div class="prov">' + esc(x.Proveedor) + '</div>' +
+      '<div class="eta">' + etaHtml + '</div>' +
+      '<div class="sub">' + esc(x.Conductor) + tel + ' · ' + id + '</div>' +
+      (x.Carga ? '<div class="carga">' + esc(x.Carga) + '</div>' : '') +
+      '<div class="extra">' + datosCarga + senal +
+        '<select aria-label="Cambiar estado" onclick="event.stopPropagation()" onchange="cambiar(\'' + id + '\', this.value)">' + opciones + '</select>' +
+      '</div></div>';
+  }
+
+  function pintarMapa(lista) {
+    if (!mapa) return;
+    const vivos = new Set();
+    lista.forEach(x => {
+      if (x.Lat === '' || x.Lng === '' || x.Lat == null) return;
+      vivos.add(x.ID);
+      const sin = minDesde(x.Ultima_actualizacion);
+      const icon = L.divIcon({ className: '', html: '<div class="pin' + (sin > datos.minutosSinSenal ? ' sin-senal' : '') + '" style="--c:' + COLOR[x.Estado] + '"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+      const texto = '<b>' + esc(x.Placa) + '</b> · ' + esc(x.Proveedor) + '<br>' + esc(x.Estado) + (GRUPO[x.Estado] === 'camino' && x.Llegada_estimada ? ' · llega ' + hora(x.Llegada_estimada) : '');
+      if (marcadores[x.ID]) marcadores[x.ID].setLatLng([x.Lat, x.Lng]).setIcon(icon).setTooltipContent(texto);
+      else marcadores[x.ID] = L.marker([x.Lat, x.Lng], { icon }).bindTooltip(texto).addTo(mapa);
+    });
+    Object.keys(marcadores).forEach(id => { if (!vivos.has(id)) { mapa.removeLayer(marcadores[id]); delete marcadores[id]; } });
+    if (!ajustado && vivos.size) {
+      const pts = [...vivos].map(id => marcadores[id].getLatLng());
+      pts.push(L.latLng(datos.almacen.lat, datos.almacen.lng));
+      mapa.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 14 });
+      ajustado = true;
+    }
+  }
+
+  function enfocar(id) {
+    const m = marcadores[id];
+    if (m) { mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(), 14)); m.openTooltip(); }
+  }
+
+  async function cambiar(id, estado) {
+    try { await api('estado', { clave, id, estado }); }
+    catch (e) { alert('No se pudo cambiar el estado: ' + e.message); }
+    cargar();
+  }
+
+  function tab(t) {
+    pestana = t;
+    document.querySelectorAll('.pestanas button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+    pintar();
+  }
+
+  function abrirQR() {
+    $('modal-qr').classList.remove('oculto');
+    $('qr-url').textContent = URL_PROVEEDOR;
+    if (!qrHecho) {
+      new QRCode($('qr'), { text: URL_PROVEEDOR, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M });
+      qrHecho = true;
+    }
+  }
+  function cerrarQR() { $('modal-qr').classList.add('oculto'); }
+</script>
+</body>
+</html>
